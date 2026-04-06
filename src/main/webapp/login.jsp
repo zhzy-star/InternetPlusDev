@@ -1,7 +1,3 @@
-<%@ page import="com.example.login_and_course.service.LoginFormValidator" %>
-<%@ page import="com.example.login_and_course.service.CaptchaService" %>
-<%@ page import="java.util.List" %>
-<%@ page import="java.util.Map" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%!
     private String escapeHtml(String value) {
@@ -14,244 +10,263 @@
                 .replace("\"", "&quot;")
                 .replace("'", "&#39;");
     }
-
-    private String escapeJs(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\r", "")
-                .replace("\n", "\\n");
-    }
-
-    private String readValue(HttpServletRequest request, String attributeName, String parameterName) {
-        Object attributeValue = request.getAttribute(attributeName);
-        if (attributeValue != null) {
-            return String.valueOf(attributeValue);
-        }
-        String parameterValue = request.getParameter(parameterName);
-        return parameterValue == null ? "" : parameterValue;
-    }
 %>
 <%
-    Map<String, List<String>> collegeDepartmentMap = LoginFormValidator.getCollegeDepartmentMap();
-    int userNameMaxLength = LoginFormValidator.USER_NAME_MAX_LENGTH;
-    int captchaLength = CaptchaService.CAPTCHA_LENGTH;
-    String userNameValue = escapeHtml(readValue(request, "userNameValue", "userName"));
-    String selectedCollege = escapeHtml(readValue(request, "selectedCollege", "college"));
-    String selectedDepartment = escapeHtml(readValue(request, "selectedDepartment", "department"));
-    String serverMessage = escapeHtml(request.getAttribute("msg") == null ? "" : request.getAttribute("msg").toString());
-    boolean refreshCaptcha = Boolean.TRUE.equals(request.getAttribute("refreshCaptcha"));
+    String userNameValue = escapeHtml(request.getParameter("userName"));
+    String selectedCollege = escapeHtml(request.getParameter("college"));
+    String selectedDepartment = escapeHtml(request.getParameter("department"));
+    String serverErrorMessage = escapeHtml((String) request.getAttribute("errorMessage"));
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>登录页面</title>
+    <title>&#30331;&#24405;&#39029;&#38754;</title>
     <style>
+        :root {
+            --bg: #eef4ff;
+            --card: #ffffff;
+            --primary: #125b9a;
+            --primary-dark: #0d4575;
+            --text: #18324a;
+            --muted: #5f7488;
+            --border: #cfe0f2;
+            --error: #ba1b1b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            margin: 24px;
+            margin: 0;
+            min-height: 100vh;
             font-family: "Microsoft YaHei", sans-serif;
-            color: #222;
+            background:
+                radial-gradient(circle at top left, rgba(18, 91, 154, 0.18), transparent 35%),
+                linear-gradient(135deg, #eef4ff 0%, #d9ebff 45%, #f8fbff 100%);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
         }
 
-        .page {
-            max-width: 580px;
+        .login-card {
+            width: min(100%, 480px);
+            background: var(--card);
+            border-radius: 18px;
+            padding: 32px 28px;
+            box-shadow: 0 18px 40px rgba(18, 91, 154, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.7);
         }
 
-        .tip {
-            margin-bottom: 16px;
-            color: #666;
+        .login-title {
+            margin: 0 0 8px;
+            font-size: 30px;
+            letter-spacing: 1px;
+        }
+
+        .login-subtitle {
+            margin: 0 0 24px;
+            color: var(--muted);
             line-height: 1.6;
         }
 
-        .form-table {
-            border-collapse: collapse;
+        .field {
+            margin-bottom: 18px;
         }
 
-        .form-table td {
-            padding: 8px 6px;
-            vertical-align: top;
-        }
-
-        .form-table td:first-child {
-            width: 90px;
-        }
-
-        input[type="text"],
-        input[type="password"],
-        select {
-            width: 260px;
-            padding: 6px 8px;
-            border: 1px solid #bbb;
-        }
-
-        .field-tip {
+        label {
             display: block;
-            margin-top: 6px;
-            color: #666;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            background: #f9fcff;
+            color: var(--text);
+        }
+
+        input:focus,
+        select:focus {
+            outline: 2px solid rgba(18, 91, 154, 0.18);
+            border-color: var(--primary);
+        }
+
+        .tips {
+            margin: -4px 0 12px;
             font-size: 13px;
+            color: var(--muted);
+        }
+
+        .error-message {
+            min-height: 22px;
+            color: var(--error);
+            font-size: 13px;
+            margin-bottom: 8px;
         }
 
         .captcha-row {
-            display: flex;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 120px;
+            gap: 12px;
             align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
         }
 
         .captcha-image {
+            width: 120px;
             height: 42px;
-            border: 1px solid #bbb;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #f4f9ff;
+            cursor: pointer;
         }
 
-        .captcha-input {
-            text-transform: uppercase;
+        .captcha-refresh {
+            margin-top: 10px;
+            padding: 0;
+            border: none;
+            background: none;
+            color: var(--primary);
+            font-size: 13px;
+            cursor: pointer;
+            text-align: left;
         }
 
-        .message {
-            min-height: 22px;
-            color: #c62828;
-            padding-top: 4px;
+        .submit-btn {
+            width: 100%;
+            padding: 13px 16px;
+            border: none;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
         }
 
-        .message[aria-live] {
-            margin: 0;
+        .submit-btn:hover {
+            filter: brightness(1.03);
+        }
+
+        @media (max-width: 520px) {
+            .login-card {
+                padding: 24px 18px;
+            }
+
+            .login-title {
+                font-size: 24px;
+            }
+
+            .captcha-row {
+                grid-template-columns: 1fr;
+            }
+
+            .captcha-image {
+                width: 100%;
+                object-fit: cover;
+            }
         }
     </style>
 </head>
 <body>
-<div class="page">
-    <h2>用户登录</h2>
-    <p class="tip">请输入用户名、密码、学院、系和验证码。密码必须同时包含字母和数字。</p>
+<section class="login-card">
+    <h1 class="login-title">SecondPractice_114</h1>
+    <p class="login-subtitle">&#35831;&#22635;&#20889;&#29992;&#25143;&#21517;&#12289;&#23494;&#30721;&#65292;&#24182;&#36873;&#25321;&#25152;&#22312;&#23398;&#38498;&#21644;&#31995;&#12290;&#23494;&#30721;&#24517;&#39035;&#21516;&#26102;&#21253;&#21547;&#23383;&#27597;&#21644;&#25968;&#23383;&#12290;</p>
 
     <form id="loginForm"
           action="<%= request.getContextPath() %>/LoginController"
           method="get"
           data-selected-college="<%= selectedCollege %>"
           data-selected-department="<%= selectedDepartment %>">
-        <table class="form-table">
-            <tr>
-                <td>用户名：</td>
-                <td>
-                    <input type="text"
-                           id="userName"
-                           name="userName"
-                           maxlength="<%= userNameMaxLength %>"
-                           autocomplete="username"
-                           value="<%= userNameValue %>"
-                           required>
-                </td>
-            </tr>
-            <tr>
-                <td>密码：</td>
-                <td>
-                    <input type="password"
-                           id="password"
-                           name="password"
-                           maxlength="20"
-                           autocomplete="current-password"
-                           pattern="(?=.*[A-Za-z])(?=.*\d).+"
-                           title="密码必须同时包含字母和数字"
-                           required>
-                    <span class="field-tip">示例：abc123</span>
-                </td>
-            </tr>
-            <tr>
-                <td>学院：</td>
-                <td>
-                    <select id="college" name="college" required></select>
-                </td>
-            </tr>
-            <tr>
-                <td>系：</td>
-                <td>
-                    <select id="department" name="department" required></select>
-                </td>
-            </tr>
-            <tr>
-                <td>验证码：</td>
-                <td>
-                    <div class="captcha-row">
-                        <input type="text"
-                               id="captcha"
-                               class="captcha-input"
-                               name="captcha"
-                               maxlength="<%= captchaLength %>"
-                               pattern="[A-Za-z0-9]{<%= captchaLength %>}"
-                               title="验证码必须为<%= captchaLength %>位字母或数字"
-                               autocomplete="off"
-                               required>
-                        <img id="captchaImage"
-                             class="captcha-image"
-                             src="<%= request.getContextPath() %>/CaptchaController"
-                             alt="验证码">
-                        <button id="refreshCaptcha" type="button">刷新验证码</button>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td>提示：</td>
-                <td>
-                    <div class="message" aria-live="polite"><%= serverMessage %></div>
-                    <div id="clientMessage" class="message" aria-live="polite"></div>
-                </td>
-            </tr>
-            <tr>
-                <td></td>
-                <td>
-                    <button type="submit">登录</button>
-                </td>
-            </tr>
-        </table>
+        <div class="field">
+            <label for="userName">&#29992;&#25143;&#21517;</label>
+            <input id="userName" name="userName" type="text" placeholder="&#35831;&#36755;&#20837;&#29992;&#25143;&#21517;" value="<%= userNameValue %>" required>
+        </div>
+
+        <div class="field">
+            <label for="password">&#23494;&#30721;</label>
+            <input id="password" name="password" type="password" placeholder="&#35831;&#36755;&#20837;&#23494;&#30721;" required>
+            <p class="tips">&#31034;&#20363;&#26684;&#24335;&#65306;abc123</p>
+        </div>
+
+        <div class="field">
+            <label for="college">&#23398;&#38498;</label>
+            <select id="college" name="college" required></select>
+        </div>
+
+        <div class="field">
+            <label for="department">&#31995;</label>
+            <select id="department" name="department" required></select>
+        </div>
+
+        <div class="field">
+            <label for="captcha">&#39564;&#35777;&#30721;</label>
+            <div class="captcha-row">
+                <input id="captcha" name="captcha" type="text" placeholder="&#35831;&#36755;&#20837;&#39564;&#35777;&#30721;" maxlength="4" autocomplete="off" required>
+                <img id="captchaImage"
+                     class="captcha-image"
+                     src="<%= request.getContextPath() %>/CaptchaController"
+                     alt="&#39564;&#35777;&#30721;&#22270;&#29255;">
+            </div>
+            <button id="refreshCaptcha" class="captcha-refresh" type="button">&#30475;&#19981;&#28165;&#65311;&#28857;&#20987;&#21047;&#26032;&#39564;&#35777;&#30721;</button>
+        </div>
+
+        <% if (!serverErrorMessage.isEmpty()) { %>
+        <div class="error-message"><%= serverErrorMessage %></div>
+        <% } %>
+        <div class="error-message" id="clientErrorMessage"></div>
+        <button class="submit-btn" type="submit">&#30331;&#24405;</button>
     </form>
-</div>
+</section>
 
 <script>
     const collegeDepartmentMap = {
-        <% int collegeIndex = 0; %>
-        <% for (Map.Entry<String, List<String>> entry : collegeDepartmentMap.entrySet()) { %>
-        "<%= escapeJs(entry.getKey()) %>": [
-            <% for (int i = 0; i < entry.getValue().size(); i++) { %>
-            "<%= escapeJs(entry.getValue().get(i)) %>"<%= i < entry.getValue().size() - 1 ? "," : "" %>
-            <% } %>
-        ]<%= collegeIndex++ < collegeDepartmentMap.size() - 1 ? "," : "" %>
-        <% } %>
+        "\u8ba1\u7b97\u673a\u5b66\u9662": [
+            "\u8f6f\u4ef6\u5de5\u7a0b",
+            "\u8ba1\u7b97\u673a\u79d1\u5b66\u4e0e\u6280\u672f",
+            "\u6570\u636e\u79d1\u5b66\u4e0e\u5927\u6570\u636e\u6280\u672f"
+        ],
+        "\u7ecf\u6d4e\u7ba1\u7406\u5b66\u9662": [
+            "\u5de5\u5546\u7ba1\u7406",
+            "\u4f1a\u8ba1\u5b66",
+            "\u5e02\u573a\u8425\u9500"
+        ],
+        "\u5916\u56fd\u8bed\u5b66\u9662": [
+            "\u82f1\u8bed",
+            "\u5546\u52a1\u82f1\u8bed",
+            "\u65e5\u8bed"
+        ]
     };
 
-    const loginForm = document.getElementById("loginForm");
     const collegeSelect = document.getElementById("college");
     const departmentSelect = document.getElementById("department");
     const passwordInput = document.getElementById("password");
-    const captchaInput = document.getElementById("captcha");
+    const loginForm = document.getElementById("loginForm");
     const captchaImage = document.getElementById("captchaImage");
     const refreshCaptchaButton = document.getElementById("refreshCaptcha");
-    const clientMessage = document.getElementById("clientMessage");
+    const clientErrorMessage = document.getElementById("clientErrorMessage");
+    const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).+$/;
     const selectedCollege = loginForm.dataset.selectedCollege;
     const selectedDepartment = loginForm.dataset.selectedDepartment;
-    const shouldRefreshCaptcha = <%= refreshCaptcha ? "true" : "false" %>;
 
-    function showClientMessage(message) {
-        clientMessage.textContent = message || "";
-    }
-
-    function appendOption(select, value, text) {
-        const option = document.createElement("option");
-        option.value = value;
-        option.textContent = text;
-        select.appendChild(option);
-    }
-
-    function renderDepartments(collegeValue, selectedDepartmentValue) {
-        const departments = collegeDepartmentMap[collegeValue] || [];
+    function renderDepartments(selectedCollegeValue, selectedDepartmentValue) {
+        const departments = collegeDepartmentMap[selectedCollegeValue] || [];
         departmentSelect.innerHTML = "";
-        departmentSelect.disabled = departments.length === 0;
-        appendOption(departmentSelect, "", "请选择系");
 
-        for (let i = 0; i < departments.length; i++) {
-            appendOption(departmentSelect, departments[i], departments[i]);
-        }
+        departments.forEach(function (department) {
+            const option = document.createElement("option");
+            option.value = department;
+            option.textContent = department;
+            departmentSelect.appendChild(option);
+        });
 
         if (selectedDepartmentValue && departments.indexOf(selectedDepartmentValue) !== -1) {
             departmentSelect.value = selectedDepartmentValue;
@@ -259,13 +274,12 @@
     }
 
     function renderColleges() {
-        const colleges = Object.keys(collegeDepartmentMap);
-        collegeSelect.innerHTML = "";
-        appendOption(collegeSelect, "", "请选择学院");
-
-        for (let i = 0; i < colleges.length; i++) {
-            appendOption(collegeSelect, colleges[i], colleges[i]);
-        }
+        Object.keys(collegeDepartmentMap).forEach(function (college) {
+            const option = document.createElement("option");
+            option.value = college;
+            option.textContent = college;
+            collegeSelect.appendChild(option);
+        });
 
         if (selectedCollege && collegeDepartmentMap[selectedCollege]) {
             collegeSelect.value = selectedCollege;
@@ -276,41 +290,15 @@
 
     function validatePassword() {
         const password = passwordInput.value.trim();
-        const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).+$/;
-        if (!passwordPattern.test(password)) {
-            showClientMessage("密码必须同时包含字母和数字。");
-            return false;
-        }
-        showClientMessage("");
-        return true;
+        const valid = passwordPattern.test(password);
+        const message = valid ? "" : "\u5bc6\u7801\u5fc5\u987b\u540c\u65f6\u5305\u542b\u5b57\u6bcd\u548c\u6570\u5b57\u3002";
+
+        passwordInput.setCustomValidity(message);
+        clientErrorMessage.textContent = message;
+        return valid;
     }
 
-    function validateSelections() {
-        if (!collegeSelect.value) {
-            showClientMessage("请选择学院。");
-            return false;
-        }
-
-        if (!departmentSelect.value) {
-            showClientMessage("请选择系。");
-            return false;
-        }
-
-        showClientMessage("");
-        return true;
-    }
-
-    function validateCaptcha() {
-        const captcha = captchaInput.value.trim();
-        if (!/^[A-Za-z0-9]{<%= captchaLength %>}$/.test(captcha)) {
-            showClientMessage("验证码必须为<%= captchaLength %>位字母或数字。");
-            return false;
-        }
-        showClientMessage("");
-        return true;
-    }
-
-    function refreshCaptchaImage() {
+    function refreshCaptcha() {
         captchaImage.src = "<%= request.getContextPath() %>/CaptchaController?t=" + Date.now();
     }
 
@@ -318,60 +306,18 @@
 
     collegeSelect.addEventListener("change", function () {
         renderDepartments(collegeSelect.value, "");
-        showClientMessage("");
     });
 
-    passwordInput.addEventListener("input", function () {
-        if (passwordInput.value.trim().length === 0) {
-            showClientMessage("");
-            return;
-        }
-        validatePassword();
-    });
-
-    captchaInput.addEventListener("input", function () {
-        captchaInput.value = captchaInput.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-        if (captchaInput.value.trim().length === 0) {
-            showClientMessage("");
-            return;
-        }
-        validateCaptcha();
-    });
-
-    refreshCaptchaButton.addEventListener("click", refreshCaptchaImage);
-    captchaImage.addEventListener("click", refreshCaptchaImage);
-    captchaImage.addEventListener("error", function () {
-        showClientMessage("验证码加载失败，请刷新页面后重试。");
-    });
+    passwordInput.addEventListener("input", validatePassword);
+    refreshCaptchaButton.addEventListener("click", refreshCaptcha);
+    captchaImage.addEventListener("click", refreshCaptcha);
 
     loginForm.addEventListener("submit", function (event) {
-        showClientMessage("");
-
-        if (!validateSelections()) {
-            event.preventDefault();
-            if (!collegeSelect.value) {
-                collegeSelect.focus();
-            } else {
-                departmentSelect.focus();
-            }
-            return;
-        }
-
         if (!validatePassword()) {
             event.preventDefault();
             passwordInput.focus();
-            return;
-        }
-
-        if (!validateCaptcha()) {
-            event.preventDefault();
-            captchaInput.focus();
         }
     });
-
-    if (shouldRefreshCaptcha) {
-        refreshCaptchaImage();
-    }
 </script>
 </body>
 </html>
