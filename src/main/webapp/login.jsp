@@ -1,109 +1,223 @@
+<%@ page import="com.example.login_and_course.service.LoginFormValidator" %>
+<%@ page import="java.util.List" %>
+<%@ page import="java.util.Map" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%!
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+
+    private String escapeJs(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "")
+                .replace("\n", "\\n");
+    }
+
+    private String readValue(HttpServletRequest request, String attributeName, String parameterName) {
+        Object attributeValue = request.getAttribute(attributeName);
+        if (attributeValue != null) {
+            return String.valueOf(attributeValue);
+        }
+        String parameterValue = request.getParameter(parameterName);
+        return parameterValue == null ? "" : parameterValue;
+    }
+%>
 <%
-    String userNameValue = request.getParameter("userName") == null ? "" : request.getParameter("userName");
-    String selectedCollege = request.getParameter("college") == null ? "" : request.getParameter("college");
-    String selectedDepartment = request.getParameter("department") == null ? "" : request.getParameter("department");
-    String msg = request.getAttribute("msg") == null ? "" : request.getAttribute("msg").toString();
+    Map<String, List<String>> collegeDepartmentMap = LoginFormValidator.getCollegeDepartmentMap();
+    String userNameValue = escapeHtml(readValue(request, "userNameValue", "userName"));
+    String selectedCollege = escapeHtml(readValue(request, "selectedCollege", "college"));
+    String selectedDepartment = escapeHtml(readValue(request, "selectedDepartment", "department"));
+    String serverMessage = escapeHtml(request.getAttribute("msg") == null ? "" : request.getAttribute("msg").toString());
+    boolean refreshCaptcha = Boolean.TRUE.equals(request.getAttribute("refreshCaptcha"));
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <title>登录页面</title>
+    <style>
+        body {
+            margin: 24px;
+            font-family: "Microsoft YaHei", sans-serif;
+            color: #222;
+        }
+
+        .page {
+            max-width: 580px;
+        }
+
+        .tip {
+            margin-bottom: 16px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .form-table {
+            border-collapse: collapse;
+        }
+
+        .form-table td {
+            padding: 8px 6px;
+            vertical-align: top;
+        }
+
+        .form-table td:first-child {
+            width: 90px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        select {
+            width: 260px;
+            padding: 6px 8px;
+            border: 1px solid #bbb;
+        }
+
+        .field-tip {
+            display: block;
+            margin-top: 6px;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .captcha-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .captcha-image {
+            height: 42px;
+            border: 1px solid #bbb;
+        }
+
+        .message {
+            min-height: 22px;
+            color: #c62828;
+            padding-top: 4px;
+        }
+    </style>
 </head>
 <body>
-<h2>用户登录</h2>
+<div class="page">
+    <h2>用户登录</h2>
+    <p class="tip">请输入用户名、密码、学院、系和验证码。密码必须同时包含字母和数字。</p>
 
-<form id="loginForm"
-      action="<%= request.getContextPath() %>/LoginController"
-      method="get"
-      data-selected-college="<%= selectedCollege %>"
-      data-selected-department="<%= selectedDepartment %>">
-    <table>
-        <tr>
-            <td>用户名：</td>
-            <td><input type="text" id="userName" name="userName" value="<%= userNameValue %>"></td>
-        </tr>
-        <tr>
-            <td>密码：</td>
-            <td>
-                <input type="password" id="password" name="password">
-                <span>密码必须包含字母和数字</span>
-            </td>
-        </tr>
-        <tr>
-            <td>学院：</td>
-            <td>
-                <select id="college" name="college"></select>
-            </td>
-        </tr>
-        <tr>
-            <td>系：</td>
-            <td>
-                <select id="department" name="department"></select>
-            </td>
-        </tr>
-        <tr>
-            <td>验证码：</td>
-            <td>
-                <input type="text" id="captcha" name="captcha" maxlength="4">
-                <img id="captchaImage" src="<%= request.getContextPath() %>/CaptchaController" alt="验证码">
-                <input type="button" id="refreshCaptcha" value="刷新验证码">
-            </td>
-        </tr>
-        <tr>
-            <td colspan="2">
-                <span id="msg" style="color:red;"><%= msg %></span>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="2">
-                <input type="submit" value="登录">
-            </td>
-        </tr>
-    </table>
-</form>
+    <form id="loginForm"
+          action="<%= request.getContextPath() %>/LoginController"
+          method="get"
+          data-selected-college="<%= selectedCollege %>"
+          data-selected-department="<%= selectedDepartment %>">
+        <table class="form-table">
+            <tr>
+                <td>用户名：</td>
+                <td>
+                    <input type="text" id="userName" name="userName" maxlength="20" value="<%= userNameValue %>" required>
+                </td>
+            </tr>
+            <tr>
+                <td>密码：</td>
+                <td>
+                    <input type="password" id="password" name="password" maxlength="20" required>
+                    <span class="field-tip">示例：abc123</span>
+                </td>
+            </tr>
+            <tr>
+                <td>学院：</td>
+                <td>
+                    <select id="college" name="college" required></select>
+                </td>
+            </tr>
+            <tr>
+                <td>系：</td>
+                <td>
+                    <select id="department" name="department" required></select>
+                </td>
+            </tr>
+            <tr>
+                <td>验证码：</td>
+                <td>
+                    <div class="captcha-row">
+                        <input type="text" id="captcha" name="captcha" maxlength="4" autocomplete="off" required>
+                        <img id="captchaImage"
+                             class="captcha-image"
+                             src="<%= request.getContextPath() %>/CaptchaController"
+                             alt="验证码">
+                        <button id="refreshCaptcha" type="button">刷新验证码</button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>提示：</td>
+                <td>
+                    <div class="message"><%= serverMessage %></div>
+                    <div id="clientMessage" class="message"></div>
+                </td>
+            </tr>
+            <tr>
+                <td></td>
+                <td>
+                    <button type="submit">登录</button>
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
 
 <script>
     const collegeDepartmentMap = {
-        "计算机学院": [
-            "软件工程",
-            "计算机科学与技术",
-            "数据科学与大数据技术"
-        ],
-        "经济管理学院": [
-            "工商管理",
-            "会计学",
-            "市场营销"
-        ],
-        "外国语学院": [
-            "英语",
-            "商务英语",
-            "日语"
-        ]
+        <% int collegeIndex = 0; %>
+        <% for (Map.Entry<String, List<String>> entry : collegeDepartmentMap.entrySet()) { %>
+        "<%= escapeJs(entry.getKey()) %>": [
+            <% for (int i = 0; i < entry.getValue().size(); i++) { %>
+            "<%= escapeJs(entry.getValue().get(i)) %>"<%= i < entry.getValue().size() - 1 ? "," : "" %>
+            <% } %>
+        ]<%= collegeIndex++ < collegeDepartmentMap.size() - 1 ? "," : "" %>
+        <% } %>
     };
 
+    const loginForm = document.getElementById("loginForm");
     const collegeSelect = document.getElementById("college");
     const departmentSelect = document.getElementById("department");
     const passwordInput = document.getElementById("password");
-    const loginForm = document.getElementById("loginForm");
+    const captchaInput = document.getElementById("captcha");
     const captchaImage = document.getElementById("captchaImage");
     const refreshCaptchaButton = document.getElementById("refreshCaptcha");
-    const msg = document.getElementById("msg");
-    const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).+$/;
+    const clientMessage = document.getElementById("clientMessage");
     const selectedCollege = loginForm.dataset.selectedCollege;
     const selectedDepartment = loginForm.dataset.selectedDepartment;
+    const shouldRefreshCaptcha = <%= refreshCaptcha ? "true" : "false" %>;
 
-    function renderDepartments(selectedCollegeValue, selectedDepartmentValue) {
-        const departments = collegeDepartmentMap[selectedCollegeValue] || [];
+    function showClientMessage(message) {
+        clientMessage.textContent = message || "";
+    }
+
+    function appendOption(select, value, text) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = text;
+        select.appendChild(option);
+    }
+
+    function renderDepartments(collegeValue, selectedDepartmentValue) {
+        const departments = collegeDepartmentMap[collegeValue] || [];
         departmentSelect.innerHTML = "";
 
-        departments.forEach(function (department) {
-            const option = document.createElement("option");
-            option.value = department;
-            option.textContent = department;
-            departmentSelect.appendChild(option);
-        });
+        for (let i = 0; i < departments.length; i++) {
+            appendOption(departmentSelect, departments[i], departments[i]);
+        }
 
         if (selectedDepartmentValue && departments.indexOf(selectedDepartmentValue) !== -1) {
             departmentSelect.value = selectedDepartmentValue;
@@ -111,12 +225,12 @@
     }
 
     function renderColleges() {
-        Object.keys(collegeDepartmentMap).forEach(function (college) {
-            const option = document.createElement("option");
-            option.value = college;
-            option.textContent = college;
-            collegeSelect.appendChild(option);
-        });
+        const colleges = Object.keys(collegeDepartmentMap);
+        collegeSelect.innerHTML = "";
+
+        for (let i = 0; i < colleges.length; i++) {
+            appendOption(collegeSelect, colleges[i], colleges[i]);
+        }
 
         if (selectedCollege && collegeDepartmentMap[selectedCollege]) {
             collegeSelect.value = selectedCollege;
@@ -127,16 +241,24 @@
 
     function validatePassword() {
         const password = passwordInput.value.trim();
-        const valid = passwordPattern.test(password);
-        if (!valid) {
-            msg.innerHTML = "密码必须同时包含字母和数字。";
+        const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).+$/;
+        if (!passwordPattern.test(password)) {
+            showClientMessage("密码必须同时包含字母和数字。");
             return false;
         }
-        msg.innerHTML = "";
-        return valid;
+        return true;
     }
 
-    function refreshCaptcha() {
+    function validateCaptcha() {
+        const captcha = captchaInput.value.trim();
+        if (!/^[A-Za-z0-9]{4}$/.test(captcha)) {
+            showClientMessage("验证码必须为4位字母或数字。");
+            return false;
+        }
+        return true;
+    }
+
+    function refreshCaptchaImage() {
         captchaImage.src = "<%= request.getContextPath() %>/CaptchaController?t=" + Date.now();
     }
 
@@ -146,16 +268,38 @@
         renderDepartments(collegeSelect.value, "");
     });
 
-    passwordInput.addEventListener("input", validatePassword);
-    refreshCaptchaButton.addEventListener("click", refreshCaptcha);
-    captchaImage.addEventListener("click", refreshCaptcha);
+    passwordInput.addEventListener("input", function () {
+        if (passwordInput.value.trim().length === 0) {
+            showClientMessage("");
+            return;
+        }
+        validatePassword();
+    });
+
+    refreshCaptchaButton.addEventListener("click", refreshCaptchaImage);
+    captchaImage.addEventListener("click", refreshCaptchaImage);
+    captchaImage.addEventListener("error", function () {
+        showClientMessage("验证码加载失败，请刷新页面后重试。");
+    });
 
     loginForm.addEventListener("submit", function (event) {
+        showClientMessage("");
+
         if (!validatePassword()) {
             event.preventDefault();
             passwordInput.focus();
+            return;
+        }
+
+        if (!validateCaptcha()) {
+            event.preventDefault();
+            captchaInput.focus();
         }
     });
+
+    if (shouldRefreshCaptcha) {
+        refreshCaptchaImage();
+    }
 </script>
 </body>
 </html>

@@ -8,6 +8,10 @@ import java.util.Map;
 
 public class LoginService {
     public LoginStatus validateLogin(Login login) {
+        if (login == null) {
+            throw new IllegalArgumentException("login cannot be null");
+        }
+
         LoginStatus loginStatus = new LoginStatus();
         loginStatus.setCourseScores(buildCourseScores(login));
         return loginStatus;
