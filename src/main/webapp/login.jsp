@@ -1,4 +1,22 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%!
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+%>
+<%
+    String userNameValue = escapeHtml(request.getParameter("userName"));
+    String selectedCollege = escapeHtml(request.getParameter("college"));
+    String selectedDepartment = escapeHtml(request.getParameter("department"));
+    String serverErrorMessage = escapeHtml((String) request.getAttribute("errorMessage"));
+%>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -95,6 +113,33 @@
             margin-bottom: 8px;
         }
 
+        .captcha-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 120px;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .captcha-image {
+            width: 120px;
+            height: 42px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #f4f9ff;
+            cursor: pointer;
+        }
+
+        .captcha-refresh {
+            margin-top: 10px;
+            padding: 0;
+            border: none;
+            background: none;
+            color: var(--primary);
+            font-size: 13px;
+            cursor: pointer;
+            text-align: left;
+        }
+
         .submit-btn {
             width: 100%;
             padding: 13px 16px;
@@ -119,6 +164,15 @@
             .login-title {
                 font-size: 24px;
             }
+
+            .captcha-row {
+                grid-template-columns: 1fr;
+            }
+
+            .captcha-image {
+                width: 100%;
+                object-fit: cover;
+            }
         }
     </style>
 </head>
@@ -127,10 +181,14 @@
     <h1 class="login-title">SecondPractice_114</h1>
     <p class="login-subtitle">&#35831;&#22635;&#20889;&#29992;&#25143;&#21517;&#12289;&#23494;&#30721;&#65292;&#24182;&#36873;&#25321;&#25152;&#22312;&#23398;&#38498;&#21644;&#31995;&#12290;&#23494;&#30721;&#24517;&#39035;&#21516;&#26102;&#21253;&#21547;&#23383;&#27597;&#21644;&#25968;&#23383;&#12290;</p>
 
-    <form id="loginForm" action="<%= request.getContextPath() %>/LoginController" method="get">
+    <form id="loginForm"
+          action="<%= request.getContextPath() %>/LoginController"
+          method="get"
+          data-selected-college="<%= selectedCollege %>"
+          data-selected-department="<%= selectedDepartment %>">
         <div class="field">
             <label for="userName">&#29992;&#25143;&#21517;</label>
-            <input id="userName" name="userName" type="text" placeholder="&#35831;&#36755;&#20837;&#29992;&#25143;&#21517;" required>
+            <input id="userName" name="userName" type="text" placeholder="&#35831;&#36755;&#20837;&#29992;&#25143;&#21517;" value="<%= userNameValue %>" required>
         </div>
 
         <div class="field">
@@ -149,7 +207,22 @@
             <select id="department" name="department" required></select>
         </div>
 
-        <div class="error-message" id="errorMessage"></div>
+        <div class="field">
+            <label for="captcha">&#39564;&#35777;&#30721;</label>
+            <div class="captcha-row">
+                <input id="captcha" name="captcha" type="text" placeholder="&#35831;&#36755;&#20837;&#39564;&#35777;&#30721;" maxlength="4" autocomplete="off" required>
+                <img id="captchaImage"
+                     class="captcha-image"
+                     src="<%= request.getContextPath() %>/CaptchaController"
+                     alt="&#39564;&#35777;&#30721;&#22270;&#29255;">
+            </div>
+            <button id="refreshCaptcha" class="captcha-refresh" type="button">&#30475;&#19981;&#28165;&#65311;&#28857;&#20987;&#21047;&#26032;&#39564;&#35777;&#30721;</button>
+        </div>
+
+        <% if (!serverErrorMessage.isEmpty()) { %>
+        <div class="error-message"><%= serverErrorMessage %></div>
+        <% } %>
+        <div class="error-message" id="clientErrorMessage"></div>
         <button class="submit-btn" type="submit">&#30331;&#24405;</button>
     </form>
 </section>
@@ -176,12 +249,16 @@
     const collegeSelect = document.getElementById("college");
     const departmentSelect = document.getElementById("department");
     const passwordInput = document.getElementById("password");
-    const errorMessage = document.getElementById("errorMessage");
     const loginForm = document.getElementById("loginForm");
+    const captchaImage = document.getElementById("captchaImage");
+    const refreshCaptchaButton = document.getElementById("refreshCaptcha");
+    const clientErrorMessage = document.getElementById("clientErrorMessage");
     const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).+$/;
+    const selectedCollege = loginForm.dataset.selectedCollege;
+    const selectedDepartment = loginForm.dataset.selectedDepartment;
 
-    function renderDepartments(selectedCollege) {
-        const departments = collegeDepartmentMap[selectedCollege] || [];
+    function renderDepartments(selectedCollegeValue, selectedDepartmentValue) {
+        const departments = collegeDepartmentMap[selectedCollegeValue] || [];
         departmentSelect.innerHTML = "";
 
         departments.forEach(function (department) {
@@ -190,6 +267,10 @@
             option.textContent = department;
             departmentSelect.appendChild(option);
         });
+
+        if (selectedDepartmentValue && departments.indexOf(selectedDepartmentValue) !== -1) {
+            departmentSelect.value = selectedDepartmentValue;
+        }
     }
 
     function renderColleges() {
@@ -200,7 +281,11 @@
             collegeSelect.appendChild(option);
         });
 
-        renderDepartments(collegeSelect.value);
+        if (selectedCollege && collegeDepartmentMap[selectedCollege]) {
+            collegeSelect.value = selectedCollege;
+        }
+
+        renderDepartments(collegeSelect.value, selectedDepartment);
     }
 
     function validatePassword() {
@@ -209,17 +294,23 @@
         const message = valid ? "" : "\u5bc6\u7801\u5fc5\u987b\u540c\u65f6\u5305\u542b\u5b57\u6bcd\u548c\u6570\u5b57\u3002";
 
         passwordInput.setCustomValidity(message);
-        errorMessage.textContent = message;
+        clientErrorMessage.textContent = message;
         return valid;
+    }
+
+    function refreshCaptcha() {
+        captchaImage.src = "<%= request.getContextPath() %>/CaptchaController?t=" + Date.now();
     }
 
     renderColleges();
 
     collegeSelect.addEventListener("change", function () {
-        renderDepartments(collegeSelect.value);
+        renderDepartments(collegeSelect.value, "");
     });
 
     passwordInput.addEventListener("input", validatePassword);
+    refreshCaptchaButton.addEventListener("click", refreshCaptcha);
+    captchaImage.addEventListener("click", refreshCaptcha);
 
     loginForm.addEventListener("submit", function (event) {
         if (!validatePassword()) {

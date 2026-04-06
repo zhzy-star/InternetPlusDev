@@ -9,11 +9,13 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 
 @WebServlet(name = "loginController", value = "/LoginController")
 public class LoginController extends HttpServlet {
+    private static final String CAPTCHA_SESSION_KEY = "captchaCode";
     private final LoginService loginService = new LoginService();
 
     @Override
@@ -23,11 +25,29 @@ public class LoginController extends HttpServlet {
         String password = trim(request.getParameter("password"));
         String college = trim(request.getParameter("college"));
         String department = trim(request.getParameter("department"));
+        String captcha = trim(request.getParameter("captcha"));
 
-        if (userName.isEmpty() || password.isEmpty() || college.isEmpty() || department.isEmpty()) {
+        if (userName.isEmpty() && password.isEmpty() && college.isEmpty() && department.isEmpty() && captcha.isEmpty()) {
             response.sendRedirect(request.getContextPath() + "/login.jsp");
             return;
         }
+
+        if (userName.isEmpty() || password.isEmpty() || college.isEmpty() || department.isEmpty() || captcha.isEmpty()) {
+            forwardToLogin(request, response, "请完整填写登录信息和验证码。");
+            return;
+        }
+
+        HttpSession session = request.getSession(false);
+        String expectedCaptcha = session == null ? "" : trim((String) session.getAttribute(CAPTCHA_SESSION_KEY));
+        if (expectedCaptcha.isEmpty() || !expectedCaptcha.equalsIgnoreCase(captcha)) {
+            if (session != null) {
+                session.removeAttribute(CAPTCHA_SESSION_KEY);
+            }
+            forwardToLogin(request, response, "验证码错误，请重新输入。");
+            return;
+        }
+
+        session.removeAttribute(CAPTCHA_SESSION_KEY);
 
         Login login = new Login();
         login.setUserName(userName);
@@ -48,5 +68,11 @@ public class LoginController extends HttpServlet {
 
     private String trim(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private void forwardToLogin(HttpServletRequest request, HttpServletResponse response, String errorMessage)
+            throws ServletException, IOException {
+        request.setAttribute("errorMessage", errorMessage);
+        request.getRequestDispatcher("/login.jsp").forward(request, response);
     }
 }
