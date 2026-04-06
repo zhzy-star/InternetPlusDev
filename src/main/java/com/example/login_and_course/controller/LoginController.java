@@ -33,27 +33,22 @@ public class LoginController extends HttpServlet {
         }
 
         if (userName.isEmpty() || password.isEmpty() || college.isEmpty() || department.isEmpty() || captcha.isEmpty()) {
-            forwardToLogin(request, response, "请完整填写登录信息和验证码。");
+            request.setAttribute("msg", "请填写完整信息。");
+            request.getRequestDispatcher("/login.jsp").forward(request, response);
             return;
         }
 
-        HttpSession session = request.getSession(false);
-        String expectedCaptcha = session == null ? "" : trim((String) session.getAttribute(CAPTCHA_SESSION_KEY));
-        if (expectedCaptcha.isEmpty() || !expectedCaptcha.equalsIgnoreCase(captcha)) {
-            if (session != null) {
-                session.removeAttribute(CAPTCHA_SESSION_KEY);
-            }
-            forwardToLogin(request, response, "验证码错误，请重新输入。");
+        HttpSession session = request.getSession();
+        String sessionCaptcha = trim((String) session.getAttribute(CAPTCHA_SESSION_KEY));
+        if (sessionCaptcha.isEmpty() || !sessionCaptcha.equalsIgnoreCase(captcha)) {
+            request.setAttribute("msg", "验证码错误。");
+            request.getRequestDispatcher("/login.jsp").forward(request, response);
             return;
         }
 
         session.removeAttribute(CAPTCHA_SESSION_KEY);
 
-        Login login = new Login();
-        login.setUserName(userName);
-        login.setPassword(password);
-        login.setCollege(college);
-        login.setDepartment(department);
+        Login login = new Login(userName, password, college, department);
 
         LoginStatus loginStatus = loginService.validateLogin(login);
 
@@ -68,11 +63,5 @@ public class LoginController extends HttpServlet {
 
     private String trim(String value) {
         return value == null ? "" : value.trim();
-    }
-
-    private void forwardToLogin(HttpServletRequest request, HttpServletResponse response, String errorMessage)
-            throws ServletException, IOException {
-        request.setAttribute("errorMessage", errorMessage);
-        request.getRequestDispatcher("/login.jsp").forward(request, response);
     }
 }
