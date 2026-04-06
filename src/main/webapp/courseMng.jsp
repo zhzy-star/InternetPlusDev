@@ -15,6 +15,7 @@
 %>
 <%
     DynContent dynContent = (DynContent) request.getAttribute("dynContent");
+    int courseCount = dynContent == null || dynContent.getCourseScores() == null ? 0 : dynContent.getCourseScores().size();
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -68,6 +69,7 @@
     %>
     <p>用户名：<strong><%= escapeHtml(dynContent.getUserName()) %></strong></p>
     <p>所在学院：<strong><%= escapeHtml(dynContent.getCollege()) %></strong></p>
+    <p>课程数量：<strong><%= courseCount %></strong></p>
 
     <%
         if (dynContent.getCourseScores() == null || dynContent.getCourseScores().isEmpty()) {

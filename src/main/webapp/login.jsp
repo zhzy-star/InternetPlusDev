@@ -106,6 +106,10 @@
             border: 1px solid #bbb;
         }
 
+        .captcha-input {
+            text-transform: uppercase;
+        }
+
         .message {
             min-height: 22px;
             color: #c62828;
@@ -172,6 +176,7 @@
                     <div class="captcha-row">
                         <input type="text"
                                id="captcha"
+                               class="captcha-input"
                                name="captcha"
                                maxlength="<%= captchaLength %>"
                                pattern="[A-Za-z0-9]{<%= captchaLength %>}"
@@ -241,6 +246,7 @@
     function renderDepartments(collegeValue, selectedDepartmentValue) {
         const departments = collegeDepartmentMap[collegeValue] || [];
         departmentSelect.innerHTML = "";
+        departmentSelect.disabled = departments.length === 0;
         appendOption(departmentSelect, "", "请选择系");
 
         for (let i = 0; i < departments.length; i++) {
@@ -279,6 +285,21 @@
         return true;
     }
 
+    function validateSelections() {
+        if (!collegeSelect.value) {
+            showClientMessage("请选择学院。");
+            return false;
+        }
+
+        if (!departmentSelect.value) {
+            showClientMessage("请选择系。");
+            return false;
+        }
+
+        showClientMessage("");
+        return true;
+    }
+
     function validateCaptcha() {
         const captcha = captchaInput.value.trim();
         if (!/^[A-Za-z0-9]{<%= captchaLength %>}$/.test(captcha)) {
@@ -297,6 +318,7 @@
 
     collegeSelect.addEventListener("change", function () {
         renderDepartments(collegeSelect.value, "");
+        showClientMessage("");
     });
 
     passwordInput.addEventListener("input", function () {
@@ -308,6 +330,7 @@
     });
 
     captchaInput.addEventListener("input", function () {
+        captchaInput.value = captchaInput.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
         if (captchaInput.value.trim().length === 0) {
             showClientMessage("");
             return;
@@ -323,6 +346,16 @@
 
     loginForm.addEventListener("submit", function (event) {
         showClientMessage("");
+
+        if (!validateSelections()) {
+            event.preventDefault();
+            if (!collegeSelect.value) {
+                collegeSelect.focus();
+            } else {
+                departmentSelect.focus();
+            }
+            return;
+        }
 
         if (!validatePassword()) {
             event.preventDefault();
