@@ -1,5 +1,6 @@
 package com.example.login_and_course.controller;
 
+import com.example.login_and_course.service.CaptchaService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -14,27 +15,22 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @WebServlet(name = "captchaController", value = "/CaptchaController")
 public class CaptchaController extends HttpServlet {
-    private static final String CAPTCHA_SESSION_KEY = "captchaCode";
-    private static final String CAPTCHA_SOURCE = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    private static final int CAPTCHA_LENGTH = 4;
     private static final int IMAGE_WIDTH = 120;
     private static final int IMAGE_HEIGHT = 42;
     private static final Logger LOGGER = Logger.getLogger(CaptchaController.class.getName());
-    private final SecureRandom random = new SecureRandom();
+    private final CaptchaService captchaService = new CaptchaService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession();
         try {
-            String captchaCode = generateCaptchaCode();
-            HttpSession session = request.getSession();
-            session.setAttribute(CAPTCHA_SESSION_KEY, captchaCode);
+            String captchaCode = captchaService.issueCaptcha(session);
 
             BufferedImage image = new BufferedImage(IMAGE_WIDTH, IMAGE_HEIGHT, BufferedImage.TYPE_INT_RGB);
             Graphics2D graphics = image.createGraphics();
@@ -49,25 +45,19 @@ public class CaptchaController extends HttpServlet {
             response.setHeader("Pragma", "no-cache");
             response.setDateHeader("Expires", 0);
             response.setHeader("X-Content-Type-Options", "nosniff");
-            ImageIO.write(image, "png", response.getOutputStream());
+            if (!ImageIO.write(image, "png", response.getOutputStream())) {
+                throw new IOException("No PNG writer available");
+            }
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to write captcha response", e);
             throw e;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to generate captcha", e);
+            captchaService.clearCaptcha(session);
             if (!response.isCommitted()) {
                 response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "验证码生成失败");
             }
         }
-    }
-
-    private String generateCaptchaCode() {
-        StringBuilder captchaBuilder = new StringBuilder(CAPTCHA_LENGTH);
-        for (int i = 0; i < CAPTCHA_LENGTH; i++) {
-            int index = random.nextInt(CAPTCHA_SOURCE.length());
-            captchaBuilder.append(CAPTCHA_SOURCE.charAt(index));
-        }
-        return captchaBuilder.toString();
     }
 
     private void renderCaptchaImage(Graphics2D graphics, String captchaCode) {
@@ -81,7 +71,7 @@ public class CaptchaController extends HttpServlet {
         graphics.setColor(new Color(70, 70, 70));
         graphics.setFont(new Font("Arial", Font.BOLD, 26));
         for (int i = 0; i < captchaCode.length(); i++) {
-            graphics.drawString(String.valueOf(captchaCode.charAt(i)), 16 + i * 22, 29 + random.nextInt(5));
+            graphics.drawString(String.valueOf(captchaCode.charAt(i)), 16 + i * 22, 30 + (i % 2 == 0 ? 0 : 2));
         }
 
         graphics.setColor(new Color(150, 150, 150));

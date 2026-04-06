@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 public class LoginFormValidator {
+    public static final int USER_NAME_MAX_LENGTH = 20;
     private static final Pattern PASSWORD_PATTERN = Pattern.compile("^(?=.*[A-Za-z])(?=.*\\d).+$");
     private static final Pattern CAPTCHA_PATTERN = Pattern.compile("^[A-Za-z0-9]{4}$");
     private static final Map<String, List<String>> COLLEGE_DEPARTMENT_MAP = buildCollegeDepartmentMap();
@@ -24,8 +25,8 @@ public class LoginFormValidator {
             return "请完整填写登录信息和验证码。";
         }
 
-        if (login.getUserName().length() > 20) {
-            return "用户名长度不能超过20个字符。";
+        if (login.getUserName().length() > USER_NAME_MAX_LENGTH) {
+            return "用户名长度不能超过" + USER_NAME_MAX_LENGTH + "个字符。";
         }
 
         if (!PASSWORD_PATTERN.matcher(login.getPassword()).matches()) {
@@ -50,10 +51,6 @@ public class LoginFormValidator {
 
     public static Map<String, List<String>> getCollegeDepartmentMap() {
         return COLLEGE_DEPARTMENT_MAP;
-    }
-
-    public static boolean isPasswordValid(String password) {
-        return password != null && PASSWORD_PATTERN.matcher(password).matches();
     }
 
     private static Map<String, List<String>> buildCollegeDepartmentMap() {

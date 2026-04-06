@@ -1,4 +1,5 @@
 <%@ page import="com.example.login_and_course.service.LoginFormValidator" %>
+<%@ page import="com.example.login_and_course.service.CaptchaService" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
@@ -35,6 +36,8 @@
 %>
 <%
     Map<String, List<String>> collegeDepartmentMap = LoginFormValidator.getCollegeDepartmentMap();
+    int userNameMaxLength = LoginFormValidator.USER_NAME_MAX_LENGTH;
+    int captchaLength = CaptchaService.CAPTCHA_LENGTH;
     String userNameValue = escapeHtml(readValue(request, "userNameValue", "userName"));
     String selectedCollege = escapeHtml(readValue(request, "selectedCollege", "college"));
     String selectedDepartment = escapeHtml(readValue(request, "selectedDepartment", "department"));
@@ -108,6 +111,10 @@
             color: #c62828;
             padding-top: 4px;
         }
+
+        .message[aria-live] {
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -124,13 +131,26 @@
             <tr>
                 <td>用户名：</td>
                 <td>
-                    <input type="text" id="userName" name="userName" maxlength="20" value="<%= userNameValue %>" required>
+                    <input type="text"
+                           id="userName"
+                           name="userName"
+                           maxlength="<%= userNameMaxLength %>"
+                           autocomplete="username"
+                           value="<%= userNameValue %>"
+                           required>
                 </td>
             </tr>
             <tr>
                 <td>密码：</td>
                 <td>
-                    <input type="password" id="password" name="password" maxlength="20" required>
+                    <input type="password"
+                           id="password"
+                           name="password"
+                           maxlength="20"
+                           autocomplete="current-password"
+                           pattern="(?=.*[A-Za-z])(?=.*\d).+"
+                           title="密码必须同时包含字母和数字"
+                           required>
                     <span class="field-tip">示例：abc123</span>
                 </td>
             </tr>
@@ -150,7 +170,14 @@
                 <td>验证码：</td>
                 <td>
                     <div class="captcha-row">
-                        <input type="text" id="captcha" name="captcha" maxlength="4" autocomplete="off" required>
+                        <input type="text"
+                               id="captcha"
+                               name="captcha"
+                               maxlength="<%= captchaLength %>"
+                               pattern="[A-Za-z0-9]{<%= captchaLength %>}"
+                               title="验证码必须为<%= captchaLength %>位字母或数字"
+                               autocomplete="off"
+                               required>
                         <img id="captchaImage"
                              class="captcha-image"
                              src="<%= request.getContextPath() %>/CaptchaController"
@@ -162,8 +189,8 @@
             <tr>
                 <td>提示：</td>
                 <td>
-                    <div class="message"><%= serverMessage %></div>
-                    <div id="clientMessage" class="message"></div>
+                    <div class="message" aria-live="polite"><%= serverMessage %></div>
+                    <div id="clientMessage" class="message" aria-live="polite"></div>
                 </td>
             </tr>
             <tr>
@@ -214,6 +241,7 @@
     function renderDepartments(collegeValue, selectedDepartmentValue) {
         const departments = collegeDepartmentMap[collegeValue] || [];
         departmentSelect.innerHTML = "";
+        appendOption(departmentSelect, "", "请选择系");
 
         for (let i = 0; i < departments.length; i++) {
             appendOption(departmentSelect, departments[i], departments[i]);
@@ -227,6 +255,7 @@
     function renderColleges() {
         const colleges = Object.keys(collegeDepartmentMap);
         collegeSelect.innerHTML = "";
+        appendOption(collegeSelect, "", "请选择学院");
 
         for (let i = 0; i < colleges.length; i++) {
             appendOption(collegeSelect, colleges[i], colleges[i]);
@@ -246,15 +275,17 @@
             showClientMessage("密码必须同时包含字母和数字。");
             return false;
         }
+        showClientMessage("");
         return true;
     }
 
     function validateCaptcha() {
         const captcha = captchaInput.value.trim();
-        if (!/^[A-Za-z0-9]{4}$/.test(captcha)) {
-            showClientMessage("验证码必须为4位字母或数字。");
+        if (!/^[A-Za-z0-9]{<%= captchaLength %>}$/.test(captcha)) {
+            showClientMessage("验证码必须为<%= captchaLength %>位字母或数字。");
             return false;
         }
+        showClientMessage("");
         return true;
     }
 
@@ -274,6 +305,14 @@
             return;
         }
         validatePassword();
+    });
+
+    captchaInput.addEventListener("input", function () {
+        if (captchaInput.value.trim().length === 0) {
+            showClientMessage("");
+            return;
+        }
+        validateCaptcha();
     });
 
     refreshCaptchaButton.addEventListener("click", refreshCaptchaImage);

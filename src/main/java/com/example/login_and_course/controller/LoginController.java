@@ -3,6 +3,8 @@ package com.example.login_and_course.controller;
 import com.example.login_and_course.pojo.DynContent;
 import com.example.login_and_course.pojo.Login;
 import com.example.login_and_course.pojo.LoginStatus;
+import com.example.login_and_course.service.CaptchaService;
+import com.example.login_and_course.service.CaptchaService.CaptchaValidationStatus;
 import com.example.login_and_course.service.LoginFormValidator;
 import com.example.login_and_course.service.LoginService;
 import jakarta.servlet.ServletException;
@@ -18,12 +20,12 @@ import java.util.logging.Logger;
 
 @WebServlet(name = "loginController", value = "/LoginController")
 public class LoginController extends HttpServlet {
-    private static final String CAPTCHA_SESSION_KEY = "captchaCode";
     private static final String MESSAGE_ATTRIBUTE = "msg";
     private static final String REFRESH_CAPTCHA_ATTRIBUTE = "refreshCaptcha";
     private static final Logger LOGGER = Logger.getLogger(LoginController.class.getName());
     private final LoginService loginService = new LoginService();
     private final LoginFormValidator loginFormValidator = new LoginFormValidator();
+    private final CaptchaService captchaService = new CaptchaService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -50,22 +52,11 @@ public class LoginController extends HttpServlet {
                 return;
             }
 
-            HttpSession session = request.getSession(false);
-            String sessionCaptcha = session == null ? "" : trim((String) session.getAttribute(CAPTCHA_SESSION_KEY));
-            if (sessionCaptcha.isEmpty()) {
-                forwardToLogin(request, response, login, "验证码已失效，请刷新后重试。", true);
+            CaptchaValidationStatus captchaValidationStatus = captchaService.validateCaptcha(request.getSession(false), captcha);
+            if (captchaValidationStatus != CaptchaValidationStatus.VALID) {
+                forwardToLogin(request, response, login, resolveCaptchaMessage(captchaValidationStatus), true);
                 return;
             }
-
-            if (!sessionCaptcha.equalsIgnoreCase(captcha)) {
-                if (session != null) {
-                    session.removeAttribute(CAPTCHA_SESSION_KEY);
-                }
-                forwardToLogin(request, response, login, "验证码错误，请重新输入。", true);
-                return;
-            }
-
-            session.removeAttribute(CAPTCHA_SESSION_KEY);
 
             LoginStatus loginStatus = loginService.validateLogin(login);
             if (loginStatus == null || loginStatus.getCourseScores() == null) {
@@ -84,10 +75,7 @@ public class LoginController extends HttpServlet {
             forwardToLogin(request, response, login, "提交信息不合法，请检查后重试。", false);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to process login request", e);
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                session.removeAttribute(CAPTCHA_SESSION_KEY);
-            }
+            captchaService.clearCaptcha(request.getSession(false));
             forwardToLogin(request, response, login, "系统出现异常，请稍后重试。", true);
         }
     }
@@ -98,6 +86,19 @@ public class LoginController extends HttpServlet {
 
     private boolean isInitialRequest(String userName, String password, String college, String department, String captcha) {
         return userName.isEmpty() && password.isEmpty() && college.isEmpty() && department.isEmpty() && captcha.isEmpty();
+    }
+
+    private String resolveCaptchaMessage(CaptchaValidationStatus captchaValidationStatus) {
+        switch (captchaValidationStatus) {
+            case MISSING:
+            case EXPIRED:
+                return "验证码已失效，请刷新后重试。";
+            case MISMATCH:
+                return "验证码错误，请重新输入。";
+            case VALID:
+            default:
+                return "验证码校验失败。";
+        }
     }
 
     private void forwardToLogin(HttpServletRequest request, HttpServletResponse response, Login login,
