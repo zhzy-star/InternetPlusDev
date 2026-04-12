@@ -1,39 +1,30 @@
 package com.example.login_and_course.service;
 
+import com.example.login_and_course.dao.CourseDAO;
+import com.example.login_and_course.dao.LoginDAO;
+import com.example.login_and_course.pojo.DynContent;
 import com.example.login_and_course.pojo.Login;
-import com.example.login_and_course.pojo.LoginStatus;
+import com.example.login_and_course.pojo.User;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.sql.SQLException;
 
 public class LoginService {
-    public LoginStatus validateLogin(Login login) {
-        LoginStatus loginStatus = new LoginStatus();
-        loginStatus.setCourseScores(buildCourseScores(login));
-        return loginStatus;
-    }
+    private final LoginDAO loginDAO = new LoginDAO();
+    private final CourseDAO courseDAO = new CourseDAO();
 
-    private Map<String, Integer> buildCourseScores(Login login) {
-        if ("\u8ba1\u7b97\u673a\u5b66\u9662".equals(login.getCollege())
-                && "\u8f6f\u4ef6\u5de5\u7a0b".equals(login.getDepartment())) {
-            return buildSoftwareEngineeringCourses();
+    public DynContent validateLogin(Login login) throws SQLException {
+        User user = loginDAO.findUserByCredentials(login.getUId(), login.getPassword());
+        if (user == null) {
+            return null;
         }
 
-        return buildSecondPresetCourses();
-    }
+        if (!user.getUSchool().equals(login.getCollege()) || !user.getUDepartment().equals(login.getDepartment())) {
+            return null;
+        }
 
-    private Map<String, Integer> buildSoftwareEngineeringCourses() {
-        LinkedHashMap<String, Integer> courseScores = new LinkedHashMap<>();
-        courseScores.put("\u9762\u5411\u4e92\u8054\u7f51+\u7684\u8f6f\u4ef6\u8bfe\u7a0b\u8bbe\u8ba1", 100);
-        courseScores.put("\u6570\u636e\u6316\u6398", 90);
-        courseScores.put("\u8f6f\u4ef6\u8bfe\u7a0b\u8bbe\u8ba1I", 90);
-        courseScores.put("Java\u7a0b\u5e8f\u8bbe\u8ba1", 95);
-        return courseScores;
-    }
-
-    private Map<String, Integer> buildSecondPresetCourses() {
-        LinkedHashMap<String, Integer> courseScores = new LinkedHashMap<>();
-        courseScores.put("\u6570\u636e\u6316\u6398", 90);
-        return courseScores;
+        DynContent dynContent = new DynContent();
+        dynContent.setUser(user);
+        dynContent.setSelectedCourses(courseDAO.findSelectedCoursesByStudent(user.getUId()));
+        return dynContent;
     }
 }

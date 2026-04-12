@@ -1,7 +1,7 @@
 package com.example.login_and_course.pojo;
 
 public class Login {
-    private String userName;
+    private String uId;
     private String password;
     private String college;
     private String department;
@@ -9,19 +9,19 @@ public class Login {
     public Login() {
     }
 
-    public Login(String userName, String password, String college, String department) {
-        this.userName = userName;
+    public Login(String uId, String password, String college, String department) {
+        this.uId = uId;
         this.password = password;
         this.college = college;
         this.department = department;
     }
 
-    public String getUserName() {
-        return userName;
+    public String getUId() {
+        return uId;
     }
 
-    public void setUserName(String userName) {
-        this.userName = userName;
+    public void setUId(String uId) {
+        this.uId = uId;
     }
 
     public String getPassword() {

@@ -1,22 +1,46 @@
 <%@ page import="com.example.login_and_course.pojo.DynContent" %>
-<%@ page import="java.util.Map" %>
+<%@ page import="com.example.login_and_course.pojo.ElectiveSub" %>
+<%@ page import="com.example.login_and_course.pojo.User" %>
+<%@ page import="com.example.login_and_course.service.CourseService" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="java.util.List" %>
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%
+    User currentUser = (User) session.getAttribute("currentUser");
     DynContent dynContent = (DynContent) request.getAttribute("dynContent");
+    List<ElectiveSub> selectedCourses = new ArrayList<>();
+    String pageErrorMessage = null;
+
+    if (dynContent != null && dynContent.getSelectedCourses() != null) {
+        selectedCourses = dynContent.getSelectedCourses();
+        if (currentUser == null) {
+            currentUser = dynContent.getUser();
+            session.setAttribute("currentUser", currentUser);
+        }
+    } else if (currentUser != null) {
+        try {
+            CourseService courseService = new CourseService();
+            selectedCourses = courseService.getStudentCourseList(currentUser.getUId());
+        } catch (Exception e) {
+            pageErrorMessage = "课程数据加载失败：" + e.getMessage();
+        }
+    }
 %>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>&#35838;&#31243;&#31649;&#29702;</title>
+    <title>课程管理</title>
     <style>
         :root {
             --bg: #f5f8fc;
             --surface: #ffffff;
             --primary: #0c5c78;
+            --accent: #dff2f7;
             --text: #173042;
             --muted: #6a7f8f;
             --border: #d5e3ec;
+            --error: #b42318;
         }
 
         * {
@@ -35,7 +59,7 @@
         }
 
         .page {
-            width: min(100%, 920px);
+            width: min(100%, 960px);
             margin: 0 auto;
             background: var(--surface);
             border-radius: 20px;
@@ -44,15 +68,23 @@
         }
 
         .page-title {
-            margin: 0 0 20px;
+            margin: 0 0 12px;
             font-size: 28px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
         .meta {
             display: flex;
             gap: 18px;
             flex-wrap: wrap;
-            margin-bottom: 20px;
             color: var(--muted);
         }
 
@@ -84,14 +116,15 @@
             background: #fafcfe;
         }
 
-        .actions {
+        .button-group {
             display: flex;
-            gap: 14px;
+            gap: 12px;
             flex-wrap: wrap;
         }
 
-        .actions button,
-        .back-link {
+        .btn,
+        .link-btn {
+            display: inline-block;
             border: none;
             border-radius: 999px;
             padding: 11px 18px;
@@ -102,60 +135,92 @@
             text-decoration: none;
         }
 
+        .btn-secondary {
+            background: #6a7f8f;
+        }
+
+        .empty-state,
+        .error-box {
+            padding: 18px;
+            border-radius: 14px;
+            margin-bottom: 16px;
+        }
+
         .empty-state {
-            padding: 24px 0;
+            background: #f8fbfd;
             color: var(--muted);
+        }
+
+        .error-box {
+            background: #fff1f1;
+            color: var(--error);
         }
     </style>
 </head>
 <body>
 <main class="page">
-    <h1 class="page-title">&#35838;&#31243;&#31649;&#29702;&#39029;&#38754;</h1>
+    <h1 class="page-title">课程管理页面</h1>
+
     <%
-        if (dynContent == null) {
+        if (currentUser == null) {
     %>
-    <div class="empty-state">
-        &#26410;&#26816;&#27979;&#21040;&#30331;&#24405;&#20449;&#24687;&#65292;&#35831;&#20808;&#36820;&#22238;&#30331;&#24405;&#39029;&#38754;&#12290;
-    </div>
-    <a class="back-link" href="<%= request.getContextPath() %>/login.jsp">&#36820;&#22238;&#30331;&#24405;</a>
+    <div class="empty-state">未检测到登录状态，请先返回登录页面。</div>
+    <a class="link-btn" href="<%= request.getContextPath() %>/login.jsp">返回登录</a>
     <%
         } else {
     %>
-    <div class="meta">
-        <span>&#29992;&#25143;&#21517;&#65306;<strong><%= dynContent.getUserName() %></strong></span>
-        <span>&#25152;&#22312;&#23398;&#38498;&#65306;<strong><%= dynContent.getCollege() %></strong></span>
+    <div class="top-bar">
+        <div class="meta">
+            <span>学号：<strong><%= currentUser.getUId() %></strong></span>
+            <span>姓名：<strong><%= currentUser.getUName() %></strong></span>
+            <span>学院：<strong><%= currentUser.getUSchool() %></strong></span>
+        </div>
+        <a class="link-btn" href="<%= request.getContextPath() %>/addElectiveSubject.jsp">新增选修课程</a>
     </div>
+
+    <% if (pageErrorMessage != null) { %>
+    <div class="error-box"><%= pageErrorMessage %></div>
+    <% } %>
 
     <table>
         <thead>
         <tr>
-            <th>&#36873;&#25321;</th>
-            <th>&#24207;&#21495;</th>
-            <th>&#35838;&#31243;&#21517;&#31216;</th>
-            <th>&#20998;&#25968;</th>
+            <th>选择</th>
+            <th>序号</th>
+            <th>课程名称</th>
+            <th>课程类型</th>
+            <th>分数</th>
         </tr>
         </thead>
         <tbody>
         <%
-            int index = 1;
-            for (Map.Entry<String, Integer> entry : dynContent.getCourseScores().entrySet()) {
+            if (selectedCourses == null || selectedCourses.isEmpty()) {
+        %>
+        <tr>
+            <td colspan="5">当前暂无已选课程。</td>
+        </tr>
+        <%
+            } else {
+                for (int i = 0; i < selectedCourses.size(); i++) {
+                    ElectiveSub electiveSub = selectedCourses.get(i);
         %>
         <tr>
             <td><input type="checkbox" name="courseSelect"></td>
-            <td><%= index++ %></td>
-            <td><%= entry.getKey() %></td>
-            <td><%= entry.getValue() %></td>
+            <td><%= i + 1 %></td>
+            <td><%= electiveSub.getCourse().getCName() %></td>
+            <td><%= electiveSub.getCourse().getCType() %></td>
+            <td><%= electiveSub.getGrade() == null ? "暂无" : electiveSub.getGrade() %></td>
         </tr>
         <%
+                }
             }
         %>
         </tbody>
     </table>
 
-    <div class="actions">
-        <button type="button">&#36864;&#36873;</button>
-        <button type="button">&#35838;&#31243;&#31649;&#29702;</button>
-        <a class="back-link" href="<%= request.getContextPath() %>/login.jsp">&#36820;&#22238;&#30331;&#24405;</a>
+    <div class="button-group">
+        <button class="btn btn-secondary" type="button">退选</button>
+        <a class="link-btn" href="<%= request.getContextPath() %>/login.jsp">退出并返回登录</a>
     </div>
     <%
         }

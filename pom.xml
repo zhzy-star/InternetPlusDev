@@ -5,9 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.example</groupId>
-    <artifactId>114-SecondPractice</artifactId>
+    <artifactId>114-ThirdWork</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <name>114-SecondPractice</name>
+    <name>114-ThirdWork</name>
     <packaging>war</packaging>
 
     <properties>
@@ -23,10 +23,15 @@
             <version>6.1.0</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.4.0</version>
+        </dependency>
     </dependencies>
 
     <build>
-        <finalName>SecondPractice_114</finalName>
+        <finalName>ThirdWork_114</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

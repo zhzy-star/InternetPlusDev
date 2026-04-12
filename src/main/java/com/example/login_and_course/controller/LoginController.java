@@ -2,7 +2,6 @@ package com.example.login_and_course.controller;
 
 import com.example.login_and_course.pojo.DynContent;
 import com.example.login_and_course.pojo.Login;
-import com.example.login_and_course.pojo.LoginStatus;
 import com.example.login_and_course.service.LoginService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -12,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 @WebServlet(name = "loginController", value = "/LoginController")
 public class LoginController extends HttpServlet {
@@ -21,18 +21,21 @@ public class LoginController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String userName = trim(request.getParameter("userName"));
+        request.setCharacterEncoding("UTF-8");
+        response.setContentType("text/html;charset=UTF-8");
+
+        String uId = trim(request.getParameter("uId"));
         String password = trim(request.getParameter("password"));
         String college = trim(request.getParameter("college"));
         String department = trim(request.getParameter("department"));
         String captcha = trim(request.getParameter("captcha"));
 
-        if (userName.isEmpty() && password.isEmpty() && college.isEmpty() && department.isEmpty() && captcha.isEmpty()) {
+        if (uId.isEmpty() && password.isEmpty() && college.isEmpty() && department.isEmpty() && captcha.isEmpty()) {
             response.sendRedirect(request.getContextPath() + "/login.jsp");
             return;
         }
 
-        if (userName.isEmpty() || password.isEmpty() || college.isEmpty() || department.isEmpty() || captcha.isEmpty()) {
+        if (uId.isEmpty() || password.isEmpty() || college.isEmpty() || department.isEmpty() || captcha.isEmpty()) {
             forwardToLogin(request, response, "请完整填写登录信息和验证码。");
             return;
         }
@@ -50,20 +53,25 @@ public class LoginController extends HttpServlet {
         session.removeAttribute(CAPTCHA_SESSION_KEY);
 
         Login login = new Login();
-        login.setUserName(userName);
+        login.setUId(uId);
         login.setPassword(password);
         login.setCollege(college);
         login.setDepartment(department);
 
-        LoginStatus loginStatus = loginService.validateLogin(login);
+        try {
+            DynContent dynContent = loginService.validateLogin(login);
+            if (dynContent == null || dynContent.getUser() == null) {
+                forwardToLogin(request, response, "学号、密码或学院系别不正确。");
+                return;
+            }
 
-        DynContent dynContent = new DynContent();
-        dynContent.setUserName(login.getUserName());
-        dynContent.setCollege(login.getCollege());
-        dynContent.setCourseScores(loginStatus.getCourseScores());
-
-        request.setAttribute("dynContent", dynContent);
-        request.getRequestDispatcher("/courseMng.jsp").forward(request, response);
+            request.getSession().setAttribute("currentUser", dynContent.getUser());
+            request.setAttribute("dynContent", dynContent);
+            request.getRequestDispatcher("/courseMng.jsp").forward(request, response);
+        } catch (SQLException e) {
+            request.setAttribute("errorMessage", "登录失败，数据库访问异常：" + e.getMessage());
+            request.getRequestDispatcher("/failure.jsp").forward(request, response);
+        }
     }
 
     private String trim(String value) {

@@ -1,43 +1,33 @@
 package com.example.login_and_course.pojo;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DynContent {
-    private String userName;
-    private String college;
-    private Map<String, Integer> courseScores = new LinkedHashMap<>();
+    private User user;
+    private List<ElectiveSub> selectedCourses = new ArrayList<>();
 
     public DynContent() {
     }
 
-    public DynContent(String userName, String college, Map<String, Integer> courseScores) {
-        this.userName = userName;
-        this.college = college;
-        this.courseScores = courseScores;
+    public DynContent(User user, List<ElectiveSub> selectedCourses) {
+        this.user = user;
+        this.selectedCourses = selectedCourses;
     }
 
-    public String getUserName() {
-        return userName;
+    public User getUser() {
+        return user;
     }
 
-    public void setUserName(String userName) {
-        this.userName = userName;
+    public void setUser(User user) {
+        this.user = user;
     }
 
-    public String getCollege() {
-        return college;
+    public List<ElectiveSub> getSelectedCourses() {
+        return selectedCourses;
     }
 
-    public void setCollege(String college) {
-        this.college = college;
-    }
-
-    public Map<String, Integer> getCourseScores() {
-        return courseScores;
-    }
-
-    public void setCourseScores(Map<String, Integer> courseScores) {
-        this.courseScores = courseScores;
+    public void setSelectedCourses(List<ElectiveSub> selectedCourses) {
+        this.selectedCourses = selectedCourses;
     }
 }

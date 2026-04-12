@@ -12,7 +12,7 @@
     }
 %>
 <%
-    String userNameValue = escapeHtml(request.getParameter("userName"));
+    String uIdValue = escapeHtml(request.getParameter("uId"));
     String selectedCollege = escapeHtml(request.getParameter("college"));
     String selectedDepartment = escapeHtml(request.getParameter("department"));
     String serverErrorMessage = escapeHtml((String) request.getAttribute("errorMessage"));
@@ -21,7 +21,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>&#30331;&#24405;&#39029;&#38754;</title>
+    <title>登录页面</title>
     <style>
         :root {
             --bg: #eef4ff;
@@ -152,10 +152,6 @@
             cursor: pointer;
         }
 
-        .submit-btn:hover {
-            filter: brightness(1.03);
-        }
-
         @media (max-width: 520px) {
             .login-card {
                 padding: 24px 18px;
@@ -178,8 +174,8 @@
 </head>
 <body>
 <section class="login-card">
-    <h1 class="login-title">SecondPractice_114</h1>
-    <p class="login-subtitle">&#35831;&#22635;&#20889;&#29992;&#25143;&#21517;&#12289;&#23494;&#30721;&#65292;&#24182;&#36873;&#25321;&#25152;&#22312;&#23398;&#38498;&#21644;&#31995;&#12290;&#23494;&#30721;&#24517;&#39035;&#21516;&#26102;&#21253;&#21547;&#23383;&#27597;&#21644;&#25968;&#23383;&#12290;</p>
+    <h1 class="login-title">ThirdWork_114</h1>
+    <p class="login-subtitle">请输入学号、密码、学院、系并填写验证码。密码仍要求同时包含字母和数字。</p>
 
     <form id="loginForm"
           action="<%= request.getContextPath() %>/LoginController"
@@ -187,62 +183,62 @@
           data-selected-college="<%= selectedCollege %>"
           data-selected-department="<%= selectedDepartment %>">
         <div class="field">
-            <label for="userName">&#29992;&#25143;&#21517;</label>
-            <input id="userName" name="userName" type="text" placeholder="&#35831;&#36755;&#20837;&#29992;&#25143;&#21517;" value="<%= userNameValue %>" required>
+            <label for="uId">学号</label>
+            <input id="uId" name="uId" type="text" placeholder="请输入学号" value="<%= uIdValue %>" required>
         </div>
 
         <div class="field">
-            <label for="password">&#23494;&#30721;</label>
-            <input id="password" name="password" type="password" placeholder="&#35831;&#36755;&#20837;&#23494;&#30721;" required>
-            <p class="tips">&#31034;&#20363;&#26684;&#24335;&#65306;abc123</p>
+            <label for="password">密码</label>
+            <input id="password" name="password" type="password" placeholder="请输入密码" required>
+            <p class="tips">示例格式：abc123</p>
         </div>
 
         <div class="field">
-            <label for="college">&#23398;&#38498;</label>
+            <label for="college">学院</label>
             <select id="college" name="college" required></select>
         </div>
 
         <div class="field">
-            <label for="department">&#31995;</label>
+            <label for="department">系</label>
             <select id="department" name="department" required></select>
         </div>
 
         <div class="field">
-            <label for="captcha">&#39564;&#35777;&#30721;</label>
+            <label for="captcha">验证码</label>
             <div class="captcha-row">
-                <input id="captcha" name="captcha" type="text" placeholder="&#35831;&#36755;&#20837;&#39564;&#35777;&#30721;" maxlength="4" autocomplete="off" required>
+                <input id="captcha" name="captcha" type="text" placeholder="请输入验证码" maxlength="4" autocomplete="off" required>
                 <img id="captchaImage"
                      class="captcha-image"
                      src="<%= request.getContextPath() %>/CaptchaController"
-                     alt="&#39564;&#35777;&#30721;&#22270;&#29255;">
+                     alt="验证码图片">
             </div>
-            <button id="refreshCaptcha" class="captcha-refresh" type="button">&#30475;&#19981;&#28165;&#65311;&#28857;&#20987;&#21047;&#26032;&#39564;&#35777;&#30721;</button>
+            <button id="refreshCaptcha" class="captcha-refresh" type="button">看不清？点击刷新验证码</button>
         </div>
 
         <% if (!serverErrorMessage.isEmpty()) { %>
         <div class="error-message"><%= serverErrorMessage %></div>
         <% } %>
         <div class="error-message" id="clientErrorMessage"></div>
-        <button class="submit-btn" type="submit">&#30331;&#24405;</button>
+        <button class="submit-btn" type="submit">登录</button>
     </form>
 </section>
 
 <script>
     const collegeDepartmentMap = {
-        "\u8ba1\u7b97\u673a\u5b66\u9662": [
-            "\u8f6f\u4ef6\u5de5\u7a0b",
-            "\u8ba1\u7b97\u673a\u79d1\u5b66\u4e0e\u6280\u672f",
-            "\u6570\u636e\u79d1\u5b66\u4e0e\u5927\u6570\u636e\u6280\u672f"
+        "计算机学院": [
+            "软件工程",
+            "计算机科学与技术",
+            "数据科学与大数据技术"
         ],
-        "\u7ecf\u6d4e\u7ba1\u7406\u5b66\u9662": [
-            "\u5de5\u5546\u7ba1\u7406",
-            "\u4f1a\u8ba1\u5b66",
-            "\u5e02\u573a\u8425\u9500"
+        "经济管理学院": [
+            "工商管理",
+            "会计学",
+            "市场营销"
         ],
-        "\u5916\u56fd\u8bed\u5b66\u9662": [
-            "\u82f1\u8bed",
-            "\u5546\u52a1\u82f1\u8bed",
-            "\u65e5\u8bed"
+        "外国语学院": [
+            "英语",
+            "商务英语",
+            "日语"
         ]
     };
 
@@ -291,7 +287,7 @@
     function validatePassword() {
         const password = passwordInput.value.trim();
         const valid = passwordPattern.test(password);
-        const message = valid ? "" : "\u5bc6\u7801\u5fc5\u987b\u540c\u65f6\u5305\u542b\u5b57\u6bcd\u548c\u6570\u5b57\u3002";
+        const message = valid ? "" : "密码必须同时包含字母和数字。";
 
         passwordInput.setCustomValidity(message);
         clientErrorMessage.textContent = message;
