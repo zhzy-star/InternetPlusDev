@@ -53,8 +53,8 @@ INSERT INTO `user` (`uId`, `uName`, `uPw`, `uSchool`, `uDepartment`) VALUES
 INSERT INTO `course` (`cId`, `cName`, `cType`) VALUES
 (1, 'Java程序设计', '必修'),
 (2, '数据库原理', '必修'),
-(3, '数据挖掘', '选修'),
-(4, '软件工程导论', '必修'),
+(3, '数据结构', '选修'),
+(4, '计算机逻辑设计', '必修'),
 (5, '计算机网络', '必修'),
 (6, 'Web应用开发', '选修'),
 (7, '人工智能基础', '选修'),
